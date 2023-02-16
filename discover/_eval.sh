@@ -34,13 +34,18 @@ function provision() {
 
   for type in $(jq -r 'to_entries[].key' <<< "$by_action"); do
     mapfile -t action_list < <(jq -c ".${type}[]" <<< "$by_action")
+    echo "action_list: " $action_list
     proviso=$(jq -sr '.[0].proviso' <<< "${action_list[@]}")
+    echo "proviso: " $proviso
     if [[ $proviso != 'null' ]]; then
       # shellcheck disable=SC1090
       . "$proviso"
       proviso action_list PROVISIONED
+      PROVISIONED=$(jq -cs '. += $p' --argjson p "$PROVISIONED" <<< "${action_list[@]}")
+      echo "PROVISIONING: " $PROVISIONED
     else
       PROVISIONED=$(jq -cs '. += $p' --argjson p "$PROVISIONED" <<< "${action_list[@]}")
+      echo "PROVISIONED: " $PROVISIONED
     fi
   done
 }
@@ -89,6 +94,7 @@ echo "::endgroup::"
 
 echo "::group::🌲️ Recycle previous work ..."
 echo "... and only procede with these:"
+echo "PROVISIONED2: " "${PROVISIONED}"
 echo "${PROVISIONED[@]}" | jq '.[]' | jq -r '"//\(.cell)/\(.block)/\(.name):\(.action)"'
 echo "::endgroup::"
 
